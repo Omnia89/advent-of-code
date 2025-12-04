@@ -32,8 +32,14 @@ func GetTestByRow(day string) []string {
 	// split raw data by row
 	dataByRow := strings.Split(rawData, "\n")
 
+	// Check if last is empty
+	if dataByRow[len(dataByRow)-1] == "" {
+		dataByRow = dataByRow[:len(dataByRow)-1]
+	}
+
 	return dataByRow
 }
+
 func GetRawData(day string) string {
 	// open "data.txt" file in current directory
 	file, err := os.Open(fmt.Sprintf(`%s/data.txt`, day))
@@ -57,6 +63,11 @@ func GetDataByRow(day string) []string {
 
 	// split raw data by row
 	dataByRow := strings.Split(rawData, "\n")
+
+	// Check if last is empty
+	if dataByRow[len(dataByRow)-1] == "" {
+		dataByRow = dataByRow[:len(dataByRow)-1]
+	}
 
 	return dataByRow
 }
