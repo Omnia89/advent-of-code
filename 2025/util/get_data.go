@@ -97,3 +97,24 @@ func IntContains(slice []int, value int) bool {
 	}
 	return false
 }
+
+func IntMin(a, b int) int {
+	if a > b {
+		return b
+	}
+	return a
+}
+
+func IntMax(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func IntAbs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
+}
