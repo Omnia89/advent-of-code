@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	data := util.GetDataByRow("day10") // 443 troppo basso
+	data := util.GetDataByRow("day10")
 	// data := util.GetTestByRow("day10")
 
 	problems := []Problem{}
@@ -24,13 +24,13 @@ func main() {
 	debugger := false
 
 	part1(problems, debugger)
-	// part2(data)
+	part2(problems, debugger)
 }
 
 type Problem struct {
 	Lights  []bool
 	Buttons [][]int
-	Voltage []int
+	Joltage []int
 }
 
 func (p Problem) toString() string {
@@ -43,7 +43,14 @@ func (p Problem) toString() string {
 		}
 		l = append(l, s)
 	}
-	str += strings.Join(l, " ") + "] - "
+	str += strings.Join(l, " ") + "] - {"
+
+	jolts := []string{}
+	for _, j := range p.Joltage {
+		jolts = append(jolts, fmt.Sprintf("%d", j))
+	}
+	str += strings.Join(jolts, ",") + "} - "
+
 	bts := []string{}
 	for _, b := range p.Buttons {
 		t := "("
@@ -76,7 +83,7 @@ func parseProblem(row string) Problem {
 	return Problem{
 		Lights:  lights,
 		Buttons: buttons,
-		Voltage: other,
+		Joltage: other,
 	}
 }
 
@@ -92,7 +99,15 @@ func printBoolArray(arr []bool) string {
 	return strings.Join(s, " ")
 }
 
-func printMatrix(matrix [][]bool) {
+func printFloatArray(arr []float64) string {
+	s := []string{}
+	for _, t := range arr {
+		s = append(s, fmt.Sprintf("%5.2f", t))
+	}
+	return strings.Join(s, " ")
+}
+
+func printIdentityMatrix(matrix [][]bool) {
 	fmt.Printf("----------------\n")
 	for _, r := range matrix {
 		fmt.Printf("%s\n", printBoolArray(r))
@@ -100,7 +115,15 @@ func printMatrix(matrix [][]bool) {
 	fmt.Printf("----------------\n")
 }
 
-func buildMatrix(p Problem) [][]bool {
+func printMatrix(matrix [][]float64) {
+	fmt.Printf("----------------\n")
+	for _, r := range matrix {
+		fmt.Printf("%s\n", printFloatArray(r))
+	}
+	fmt.Printf("----------------\n")
+}
+
+func buildIdentityMatrix(p Problem) [][]bool {
 	matrix := [][]bool{}
 	for r, l := range p.Lights {
 		matrix = append(matrix, make([]bool, len(p.Buttons)+1))
@@ -109,6 +132,33 @@ func buildMatrix(p Problem) [][]bool {
 		}
 		matrix[r][len(p.Buttons)] = l
 	}
+	return matrix
+}
+
+func buildFloatMatrix(p Problem) [][]float64 {
+	matrix := [][]float64{}
+
+	for i := range len(p.Joltage) + 1 {
+		matrix = append(matrix, make([]float64, len(p.Buttons)+1))
+		if i < len(p.Joltage) {
+			matrix[i][len(p.Buttons)] = float64(p.Joltage[i])
+		}
+	}
+
+	for c, bts := range p.Buttons {
+		for _, b := range bts {
+			matrix[b][c] = 1
+		}
+	}
+
+	for c := range matrix[0] {
+		s := 0.0
+		for r := range matrix {
+			s += matrix[r][c]
+		}
+		matrix[len(matrix)-1][c] = s
+	}
+
 	return matrix
 }
 
@@ -165,9 +215,9 @@ func part1(problems []Problem, debug bool) {
 		}
 
 		indexButton := 0
-		matrix := buildMatrix(prob)
+		matrix := buildIdentityMatrix(prob)
 		if debug {
-			printMatrix(matrix)
+			printIdentityMatrix(matrix)
 		}
 		row := 0
 		column := 0
@@ -214,7 +264,7 @@ func part1(problems []Problem, debug bool) {
 			row++
 		}
 		if debug {
-			printMatrix(matrix)
+			printIdentityMatrix(matrix)
 		}
 
 		minResult := math.MaxInt
@@ -270,4 +320,135 @@ func part1(problems []Problem, debug bool) {
 	}
 
 	fmt.Printf("Part 1: %d\n", counter)
+}
+
+func findPivot(matrix [][]float64, pivottedRows []int, pivottedCols []int) (row int, col int) {
+	row = -1
+	col = -1
+
+	maxCol := -1
+	maxColVal := -1.0
+	allZero := true
+
+	for c := range len(matrix[0]) - 1 {
+		if slices.Contains(pivottedCols, c) {
+			continue
+		}
+		x := matrix[len(matrix)-1][c]
+		if x > maxColVal {
+			maxCol = c
+			maxColVal = x
+		}
+		if x > 0 {
+			allZero = false
+		}
+	}
+
+	if maxCol == -1 || allZero {
+		return
+	}
+
+	minRow := len(matrix) + 2
+	maxRowVal := math.MaxFloat64
+	for r := range len(matrix) - 1 {
+		if slices.Contains(pivottedRows, r) {
+			continue
+		}
+		if matrix[r][maxCol] <= 0 {
+			continue
+		}
+		val := matrix[r][len(matrix[r])-1] / matrix[r][maxCol]
+		if val < maxRowVal {
+			minRow = r
+			maxRowVal = val
+		}
+	}
+
+	if minRow < len(matrix)-1 {
+		row = minRow
+		col = maxCol
+	}
+	return
+}
+
+// subtractRows(a, b) => a - b
+func subtractRows(a []float64, b []float64, pivCol int) []float64 {
+	res := make([]float64, len(a))
+	coeff := a[pivCol] // a[pivCol] / b[pivCol]
+	for i := range res {
+		res[i] = a[i] - coeff*b[i]
+	}
+	return res
+}
+
+func normalizeRow(row []float64, pivCol int) []float64 {
+	coeff := row[pivCol]
+	if coeff == 0 {
+		return row
+	}
+	res := make([]float64, len(row))
+	for i := range res {
+		res[i] = row[i] / coeff
+	}
+	return res
+}
+
+func part2(problems []Problem, debug bool) {
+	counter := 0
+	for pIdx, prob := range problems {
+		if debug {
+			fmt.Printf("prob - %s\n", prob.toString())
+		}
+		matrix := buildFloatMatrix(prob)
+		if debug {
+			printMatrix(matrix)
+		}
+
+		pivottedCols := []int{}
+		pivottedRows := []int{}
+
+		pivRow, pivCol := findPivot(matrix, pivottedRows, pivottedCols)
+		if debug {
+			fmt.Printf("   - piv [%d][%d]\n", pivRow, pivCol)
+		}
+
+		for pivRow != -1 {
+			pivottedCols = append(pivottedCols, pivCol)
+			pivottedRows = append(pivottedRows, pivRow)
+
+			matrix[pivRow] = normalizeRow(matrix[pivRow], pivCol)
+
+			for r, row := range matrix {
+				if r == pivRow {
+					continue
+				}
+
+				if row[pivCol] != 0 {
+					matrix[r] = subtractRows(matrix[r], matrix[pivRow], pivCol)
+				}
+			}
+			pivRow, pivCol = findPivot(matrix, pivottedRows, pivottedCols)
+			if debug {
+				printMatrix(matrix)
+				fmt.Printf("   - piv [%d][%d]\n", pivRow, pivCol)
+			}
+		}
+		sum := 0.0
+		for _, r := range matrix {
+			sum += r[len(r)-1]
+		}
+
+		if debug {
+			printMatrix(matrix)
+			fmt.Printf("   - res [%d]\n", sum)
+		}
+		intSum := int(math.Round(sum))
+		if debug {
+			fmt.Printf("prob idx [%d] res [%d]\n", pIdx, intSum)
+		}
+
+		counter += intSum
+	}
+
+	fmt.Printf("Part 2: %d\n", counter)
 }
