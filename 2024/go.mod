@@ -1,3 +1,3 @@
 module advent2024
 
-go 1.22.4
+go 1.25

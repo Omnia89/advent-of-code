@@ -8,6 +8,38 @@ import (
 	"strings"
 )
 
+func GetRawTest(day string) string {
+	// open "data.txt" file in current directory
+	file, err := os.Open(fmt.Sprintf(`%s/test.txt`, day))
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// read file
+	res, err := io.ReadAll(file)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(res)
+}
+
+func GetTestByRow(day string) []string {
+	// get raw data
+	rawData := GetRawTest(day)
+
+	// split raw data by row
+	dataByRow := strings.Split(rawData, "\n")
+
+	// Check if last is empty
+	if dataByRow[len(dataByRow)-1] == "" {
+		dataByRow = dataByRow[:len(dataByRow)-1]
+	}
+
+	return dataByRow
+}
+
 func GetRawData(day string) string {
 	// open "data.txt" file in current directory
 	file, err := os.Open(fmt.Sprintf(`%s/data.txt`, day))
@@ -31,6 +63,11 @@ func GetDataByRow(day string) []string {
 
 	// split raw data by row
 	dataByRow := strings.Split(rawData, "\n")
+
+	// Check if last is empty
+	if dataByRow[len(dataByRow)-1] == "" {
+		dataByRow = dataByRow[:len(dataByRow)-1]
+	}
 
 	return dataByRow
 }
@@ -59,4 +96,25 @@ func IntContains(slice []int, value int) bool {
 		}
 	}
 	return false
+}
+
+func IntMin(a, b int) int {
+	if a > b {
+		return b
+	}
+	return a
+}
+
+func IntMax(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func IntAbs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
 }
