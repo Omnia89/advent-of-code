@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"slices"
 
 	"advent2024/util"
 )
@@ -11,9 +12,10 @@ func main() {
 	// data := util.GetTestByRow("day09")
 
 	intData := util.StringToIntSlice(data[0], "")
+	intData2 := slices.Clone(intData)
 
 	part1(intData)
-	part2(intData)
+	part2(intData2)
 }
 
 func part1(data []int) {
@@ -72,8 +74,79 @@ externalFor:
 	fmt.Printf("Part 1: %d\n", sum)
 }
 
+type FreeSpace struct {
+	Index  int
+	Length int
+}
+
 func part2(data []int) {
 	sum := 0
+
+	freeSpaces := []FreeSpace{}
+	compactDisk := []int{}
+
+	index := 0
+	for i, v := range data {
+		isData := i%2 == 0
+		val := i / 2
+		if !isData {
+			val = -1
+			freeSpaces = append(freeSpaces, FreeSpace{index, v})
+		}
+		for range v {
+			compactDisk = append(compactDisk, val)
+		}
+		index += v
+	}
+
+	lastI := len(compactDisk) - 1
+	lastValue := compactDisk[lastI]
+	for i := lastI - 1; i >= 0; i-- {
+		if compactDisk[lastI] == compactDisk[i] {
+			if compactDisk[i] == -1 {
+				lastI = i
+			}
+			continue
+		}
+
+		// i[valA] lastI[-1]
+		if compactDisk[i] != -1 && compactDisk[lastI] == -1 {
+			lastI = i
+			continue
+		}
+
+		// i[valA] lastI[valB]
+		// i[-1] lastI[valA]
+
+		if compactDisk[lastI] > lastValue {
+			lastI = i
+			continue
+		}
+
+		lastValue = compactDisk[lastI]
+
+		space := lastI - i
+		for k, f := range freeSpaces {
+			if f.Index > i {
+				continue
+			}
+			if f.Length >= space {
+				freeSpaces[k].Length -= space
+				freeSpaces[k].Index += space
+				for v := range space {
+					compactDisk[f.Index+v] = compactDisk[lastI]
+					compactDisk[i+1+v] = -1
+				}
+				break
+			}
+		}
+		lastI = i
+	}
+	for i, v := range compactDisk {
+		if v != -1 {
+			sum += i * v
+		}
+	}
 
 	fmt.Printf("Part 2: %d\n", sum)
 }
