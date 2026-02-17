@@ -174,104 +174,6 @@ func part1(data []string) {
 	fmt.Printf("Part 1: %d\n", counter)
 }
 
-func findBestPoint(start Point, grid []string, points map[Point]int, alreadyDone map[Point]bool, nesting int) (Point, int, int) {
-	if nesting > 19 {
-		return start, 0, nesting
-	}
-	best := 0
-	bestNesting := 0
-	var p Point
-
-	var temp Point
-	var skip bool
-
-	// up
-	temp = Point{start.X, start.Y - 1}
-	skip = alreadyDone[temp]
-	alreadyDone[temp] = true
-	if !skip && temp.Y > 0 && temp.Y < len(grid)-1 {
-		if v, ok := points[temp]; ok {
-			if v > best {
-				best = v
-				bestNesting = nesting
-				p = temp
-			}
-		} else {
-			pp, c, n := findBestPoint(temp, grid, points, alreadyDone, nesting+1)
-			if c > best {
-				best = c
-				bestNesting = n
-				p = pp
-			}
-		}
-	}
-
-	// down
-	temp = Point{start.X, start.Y + 1}
-	skip = alreadyDone[temp]
-	alreadyDone[temp] = true
-	if !skip && temp.Y > 0 && temp.Y < len(grid)-1 {
-		if v, ok := points[temp]; ok {
-			if v > best {
-				best = v
-				bestNesting = nesting
-				p = temp
-			}
-		} else {
-			pp, c, n := findBestPoint(temp, grid, points, alreadyDone, nesting+1)
-			if c > best {
-				best = c
-				bestNesting = n
-				p = pp
-			}
-		}
-	}
-
-	// left
-	temp = Point{start.X - 1, start.Y}
-	skip = alreadyDone[temp]
-	alreadyDone[temp] = true
-	if !skip && temp.X > 0 && temp.X < len(grid[0])-1 {
-		if v, ok := points[temp]; ok {
-			if v > best {
-				best = v
-				bestNesting = nesting
-				p = temp
-			}
-		} else {
-			pp, c, n := findBestPoint(temp, grid, points, alreadyDone, nesting+1)
-			if c > best {
-				best = c
-				bestNesting = n
-				p = pp
-			}
-		}
-	}
-
-	// right
-	temp = Point{start.X + 1, start.Y}
-	skip = alreadyDone[temp]
-	alreadyDone[temp] = true
-	if !skip && temp.X > 0 && temp.X < len(grid[0])-1 {
-		if v, ok := points[temp]; ok {
-			if v > best {
-				best = v
-				bestNesting = nesting
-				p = temp
-			}
-		} else {
-			pp, c, n := findBestPoint(temp, grid, points, alreadyDone, nesting+1)
-			if c > best {
-				best = c
-				bestNesting = n
-				p = pp
-			}
-		}
-	}
-
-	return p, best, bestNesting
-}
-
 func getNeigh(grid []string, start Point, direction string) (Point, bool) {
 	var p Point
 	if direction == "up" {
@@ -293,7 +195,6 @@ func getNeigh(grid []string, start Point, direction string) (Point, bool) {
 }
 
 // TODO: new function to use
-// lo score è sempre 75, e anche il punto di arrivo è sempre uguale, sus
 func getGridPoint(data []string, start Point, track map[Point]int) (map[Point]int, Point, int) {
 	queue := []Point{start}
 
@@ -338,6 +239,44 @@ func getGridPoint(data []string, start Point, track map[Point]int) (map[Point]in
 	return points, bestPoint, bestScore
 }
 
+// ---- new ----
+
+func getPointsInRange(data []string, start Point, step int) []Point {
+	ps := []Point{}
+
+	minY := util.IntMax(0, start.Y-step)
+	maxY := util.IntMin(len(data)-1, start.Y+step)
+
+	for y := minY; y <= maxY; y++ {
+		// for every row, calculate how much narrow/wide is the x range
+
+		// dy = how far is the row from the origin. This value is used to narrow the width
+		dy := start.Y - y
+		if dy < 0 {
+			dy *= -1
+		}
+		dx := step - dy // width
+
+		minX := util.IntMax(0, start.X-dx)
+		maxX := util.IntMin(len(data[0])-1, start.X+dx)
+
+		for x := minX; x <= maxX; x++ {
+			temp := Point{x, y}
+			if temp == start {
+				continue
+			}
+			ps = append(ps, temp)
+		}
+	}
+	return ps
+}
+
+func distance(a, b Point) int {
+	dx := util.IntAbs(a.X - b.X)
+	dy := util.IntAbs(a.Y - b.Y)
+	return dx + dy
+}
+
 func part2(data []string) {
 	counter := 0
 
@@ -358,11 +297,23 @@ func part2(data []string) {
 			continue
 		}
 
-		_, best, gain := getGridPoint(data, p, points)
-		if gain >= limit {
-			fmt.Printf("  start[%s] cheat[%s] gain[%d]\n", p.toString(), best.toString(), gain)
-			counter++
+		pointsInReach := getPointsInRange(data, p, 20)
+		for _, pp := range pointsInReach {
+			endVal, ok := points[pp]
+			if !ok {
+				continue
+			}
+
+			startVal := points[p]
+
+			if endVal > startVal {
+				gain := endVal - startVal - distance(p, pp)
+				if gain >= limit {
+					counter++
+				}
+			}
 		}
+
 	}
 
 	fmt.Printf("Part 2: %d\n", counter)
