@@ -126,37 +126,45 @@ var numPadSequences = map[string]map[string]string{
 	},
 }
 
-func moveOnDPad(start Point, destination string) (moves string, end Point) {
-	pad := map[string]Point{
-		"^": {1, 0},
-		"A": {2, 0},
-		"<": {0, 1},
-		"v": {1, 1},
-		">": {2, 1},
-	}
-	inversePad := map[Point]string{
-		{1, 0}: "^",
-		{2, 0}: "A",
-		{0, 1}: "<",
-		{1, 1}: "v",
-		{2, 1}: ">",
+type cacheKey struct {
+	moves  string
+	nRobot int
+}
+
+func recursiveDPad(moves string, nRobot int, cache map[cacheKey]int) int {
+	if c, ok := cache[cacheKey{moves, nRobot}]; ok {
+		return c
 	}
 
-	startSymbol, ok := inversePad[start]
-	if !ok {
-		return
-	}
+	cost := 0
+	for i := range len(moves) - 1 {
+		start := moves[i : i+1]
+		end := moves[i+1 : i+2]
+		seq := numPadSequences[start][end]
 
-	destinationPoint, ok := pad[destination]
-	if !ok {
-		return
-	}
+		val := 0
+		if nRobot == 1 {
+			val = len(seq)
+		} else {
+			val = recursiveDPad("A"+seq, nRobot-1, cache)
+		}
 
-	return numPadSequences[startSymbol][destination], destinationPoint
+		cost += val
+	}
+	cache[cacheKey{moves, nRobot}] = cost
+	return cost
+}
+
+func getCost(moves string, nRobot int) int {
+	cache := map[cacheKey]int{}
+
+	cost := recursiveDPad("A"+moves, nRobot, cache)
+
+	return cost
 }
 
 func getNumber(val string) int {
-	v, _ := strconv.Atoi(strings.Replace(val, "A", "", -1))
+	v, _ := strconv.Atoi(strings.ReplaceAll(val, "A", ""))
 	return v
 }
 
@@ -174,18 +182,9 @@ func part1(data []string) {
 			moves += m
 		}
 
-		for range 2 {
-			tempMoves := ""
-			tempPoint := Point{2, 0}
-			var m string
-
-			for _, c := range moves {
-				m, tempPoint = moveOnDPad(tempPoint, string(c))
-				tempMoves += m
-			}
-			moves = tempMoves
-		}
-		calc := getNumber(sequence) * len(moves)
+		cost := getCost(moves, 2)
+		number := getNumber(sequence)
+		calc := number * cost
 		counter += calc
 	}
 
@@ -206,18 +205,9 @@ func part2(data []string) {
 			moves += m
 		}
 
-		for range 25 {
-			tempMoves := ""
-			tempPoint := Point{2, 0}
-			var m string
-
-			for _, c := range moves {
-				m, tempPoint = moveOnDPad(tempPoint, string(c))
-				tempMoves += m
-			}
-			moves = tempMoves
-		}
-		calc := getNumber(sequence) * len(moves)
+		cost := getCost(moves, 25)
+		number := getNumber(sequence)
+		calc := number * cost
 		counter += calc
 	}
 	fmt.Printf("Part 2: %d\n", counter)
