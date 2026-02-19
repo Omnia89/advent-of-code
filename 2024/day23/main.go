@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	// data := util.GetTestByRow("day23")
+	//data := util.GetTestByRow("day23")
 	data := util.GetDataByRow("day23")
 
 	joins := parse(data)
@@ -52,6 +52,16 @@ func getLinkMap(joins []join) map[string][]string {
 	return links
 }
 
+func commonArray(a, b []string) []string {
+	common := []string{}
+	for _, s := range a {
+		if slices.Contains(b, s) {
+			common = append(common, s)
+		}
+	}
+	return common
+}
+
 func part1(joins []join) {
 	counter := 0
 
@@ -86,8 +96,54 @@ func part1(joins []join) {
 	fmt.Printf("Part 1: %d\n", counter)
 }
 
-func part2(joins []join) {
-	counter := 0
+func netKey(a []string) string {
+	slices.Sort(a)
+	return strings.Join(a, ",")
+}
 
-	fmt.Printf("Part 2: %d\n", counter)
+func replaceInArray(a []string, old string, new string) []string {
+	i := slices.Index(a, old)
+	n := slices.Clone(a)
+	if i < 0 {
+		return n
+	}
+	n[i] = new
+	return n
+}
+
+func part2(joins []join) {
+	links := getLinkMap(joins)
+
+	var bestNodeKey string
+
+	for node, nodeLinks := range links {
+		net := map[string]int{}
+		common := slices.Clone(nodeLinks)
+		for _, linkedNode := range nodeLinks {
+			cc := replaceInArray(common, linkedNode, node)
+			newCommon := replaceInArray(commonArray(cc, links[linkedNode]), node, linkedNode)
+			net[netKey(newCommon)]++
+			//common = newCommon
+		}
+		//fmt.Printf("  [%s] -> [%v]\n", node, net)
+
+		for k, v := range net {
+			kNum := strings.Count(k, ",") + 2
+			bestK := 0
+			if len(bestNodeKey) > 0 {
+				bestK = strings.Count(bestNodeKey, ",") + 1
+			}
+
+			if kNum == v+1 && kNum > bestK {
+				bestNodeKey = strings.Join(append(strings.Split(k, ","), node), ",")
+			}
+		}
+	}
+
+	ordered := strings.Split(bestNodeKey, ",")
+	slices.Sort(ordered)
+	bestNodeKey = strings.Join(ordered, ",")
+	kNum := strings.Count(bestNodeKey, ",") + 1
+
+	fmt.Printf("Part 2: [%d] %s\n", kNum, bestNodeKey)
 }
