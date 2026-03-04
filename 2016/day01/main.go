@@ -63,7 +63,6 @@ func part1(data []string) {
 	fmt.Printf("Part 1: %d\n", counter)
 }
 
-// 155 too high
 func part2(data []string) {
 	counter := 0
 
