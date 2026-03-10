@@ -44,7 +44,6 @@ func part1(n int) {
 	fmt.Printf("Part 1: %d\n", counter)
 }
 
-// 1507302 too high
 func part2(n int) {
 	counter := 0
 
