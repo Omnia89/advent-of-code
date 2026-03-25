@@ -89,15 +89,6 @@ func StringToIntSlice(s string, separator string) []int {
 	return numbers
 }
 
-func IntContains(slice []int, value int) bool {
-	for _, v := range slice {
-		if v == value {
-			return true
-		}
-	}
-	return false
-}
-
 func IntMin(a, b int) int {
 	if a > b {
 		return b
@@ -117,4 +108,15 @@ func IntAbs(a int) int {
 		return -a
 	}
 	return a
+}
+
+func IntJoin(a []int, separator string) string {
+	var sb strings.Builder
+
+	for i := range len(a) - 1 {
+		fmt.Fprintf(&sb, "%d%s", a[i], separator)
+	}
+	fmt.Fprintf(&sb, "%d", a[len(a)-1])
+
+	return sb.String()
 }
