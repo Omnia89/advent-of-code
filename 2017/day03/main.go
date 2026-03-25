@@ -99,7 +99,6 @@ func sumNeighborns(p Point, grid map[Point]int) int {
 	return s
 }
 
-// too high 283758
 func part2(num int) {
 	counter := 0
 
