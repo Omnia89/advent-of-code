@@ -203,7 +203,7 @@ func part1(area map[Point]Cell) {
 		}
 	}
 
-	printArea(area)
+	// printArea(area)
 
 	counter = maxHops
 
