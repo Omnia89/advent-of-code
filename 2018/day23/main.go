@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/heap"
 	"fmt"
 	"regexp"
 
@@ -8,8 +9,8 @@ import (
 )
 
 func main() {
-	// data := util.GetDataByRow("day23")
-	data := util.GetTestByRow("day23")
+	data := util.GetDataByRow("day23")
+	// data := util.GetTestByRow("day23")
 
 	list := parse(data)
 
@@ -68,43 +69,189 @@ func part1(bots []Bot) {
 	fmt.Printf("Part 1: %d\n", counter)
 }
 
+func boxDistance(b *Box, p Point) int {
+	dist := 0
+	if p.x > b.xMax || p.x < b.xMin {
+		if p.x > b.xMax {
+			dist += p.x - b.xMax
+		} else {
+			dist += b.xMin - p.x
+		}
+	}
+	if p.y > b.yMax || p.y < b.yMin {
+		if p.y > b.yMax {
+			dist += p.y - b.yMax
+		} else {
+			dist += b.yMin - p.y
+		}
+	}
+	if p.z > b.zMax || p.z < b.zMin {
+		if p.z > b.zMax {
+			dist += p.z - b.zMax
+		} else {
+			dist += b.zMin - p.z
+		}
+	}
+	return dist
+}
+
+func touchBox(b *Box, p Bot) bool {
+	dist := boxDistance(b, p.p)
+
+	return dist <= p.radius
+}
+
+func countTouches(box *Box, bots []Bot) {
+	box.points = 0
+	for _, b := range bots {
+		if touchBox(box, b) {
+			box.points += 1
+		}
+	}
+
+	box.minDist = boxDistance(box, Point{0, 0, 0})
+}
+
+func splitBox(b *Box) []Box {
+	boxes := make([]Box, 0, 8)
+	halfX := b.xMin + (b.xMax-b.xMin)/2
+	halfY := b.yMin + (b.yMax-b.yMin)/2
+	halfZ := b.zMin + (b.zMax-b.zMin)/2
+
+	boxes = append(boxes, Box{
+		xMin: b.xMin,
+		xMax: halfX,
+		yMin: b.yMin,
+		yMax: halfY,
+		zMin: b.zMin,
+		zMax: halfZ,
+	})
+	if halfX < b.xMax {
+		boxes = append(boxes, Box{
+			xMin: halfX + 1,
+			xMax: b.xMax,
+			yMin: b.yMin,
+			yMax: halfY,
+			zMin: b.zMin,
+			zMax: halfZ,
+		})
+	}
+	if halfY < b.yMax {
+		boxes = append(boxes, Box{
+			xMin: b.xMin,
+			xMax: halfX,
+			yMin: halfY + 1,
+			yMax: b.yMax,
+			zMin: b.zMin,
+			zMax: halfZ,
+		})
+	}
+	if halfX < b.xMax && halfY < b.yMax {
+		boxes = append(boxes, Box{
+			xMin: halfX + 1,
+			xMax: b.xMax,
+			yMin: halfY + 1,
+			yMax: b.yMax,
+			zMin: b.zMin,
+			zMax: halfZ,
+		})
+	}
+
+	if halfZ < b.zMax {
+		boxes = append(boxes, Box{
+			xMin: b.xMin,
+			xMax: halfX,
+			yMin: b.yMin,
+			yMax: halfY,
+			zMin: halfZ + 1,
+			zMax: b.zMax,
+		})
+		if halfX < b.xMax {
+			boxes = append(boxes, Box{
+				xMin: halfX + 1,
+				xMax: b.xMax,
+				yMin: b.yMin,
+				yMax: halfY,
+				zMin: halfZ + 1,
+				zMax: b.zMax,
+			})
+		}
+		if halfY < b.yMax {
+			boxes = append(boxes, Box{
+				xMin: b.xMin,
+				xMax: halfX,
+				yMin: halfY + 1,
+				yMax: b.yMax,
+				zMin: halfZ + 1,
+				zMax: b.zMax,
+			})
+		}
+		if halfX < b.xMax && halfY < b.yMax {
+			boxes = append(boxes, Box{
+				xMin: halfX + 1,
+				xMax: b.xMax,
+				yMin: halfY + 1,
+				yMax: b.yMax,
+				zMin: halfZ + 1,
+				zMax: b.zMax,
+			})
+		}
+	}
+	return boxes
+}
+
 func part2(bots []Bot) {
-	touched := map[Point]int{}
+	counter := 0
+
+	firstBox := Box{}
 
 	for _, b := range bots {
-		for dz := range b.radius + 1 {
-			newRadius := b.radius - dz
+		if b.p.x-b.radius < firstBox.xMin {
+			firstBox.xMin = b.p.x - b.radius
+		}
+		if b.p.x+b.radius > firstBox.xMax {
+			firstBox.xMax = b.p.x + b.radius
+		}
 
-			for dy := range newRadius*2 + 1 {
-				y := dy - (newRadius - b.p.y)
+		if b.p.y-b.radius < firstBox.yMin {
+			firstBox.yMin = b.p.y - b.radius
+		}
+		if b.p.y+b.radius > firstBox.yMax {
+			firstBox.yMax = b.p.y + b.radius
+		}
 
-				remaining := newRadius - util.IntAbs(b.p.y-y)
+		if b.p.z-b.radius < firstBox.zMin {
+			firstBox.zMin = b.p.z - b.radius
+		}
+		if b.p.z+b.radius > firstBox.zMax {
+			firstBox.zMax = b.p.z + b.radius
+		}
+		firstBox.points++
+	}
 
-				for dx := range remaining*2 + 1 {
-					x := b.p.x - remaining + dx
-					if dz != 0 {
-						touched[Point{x, y, b.p.z - dz}] += 1
-						touched[Point{x, y, b.p.z + dz}] += 1
-					} else {
-						touched[Point{x, y, b.p.z}] += 1
-					}
-				}
-			}
+	queue := make(BoxQueue, 0)
+	heap.Init(&queue)
+	heap.Push(&queue, &firstBox)
+
+	var final Box
+	for queue.Len() > 0 {
+		box := heap.Pop(&queue).(*Box)
+		volume := box.volume()
+		if volume == 0 {
+			panic("da faq")
+		}
+		if volume == 1 {
+			final = *box
+			break
+		}
+		boxes := splitBox(box)
+		for _, b := range boxes {
+			countTouches(&b, bots)
+			heap.Push(&queue, &b)
 		}
 	}
 
-	maxTouch := 0
-	var p Point
-
-	for pp, n := range touched {
-		if n > maxTouch {
-			maxTouch = n
-			p = pp
-		}
-	}
-
-	fmt.Printf("%d,%d,%d\n", p.x, p.y, p.z)
-	counter := util.IntAbs(p.x) + util.IntAbs(p.y) + util.IntAbs(p.z)
+	counter = final.minDist
 
 	fmt.Printf("Part 2: %d\n", counter)
 }
